@@ -1,35 +1,35 @@
 # Claude Code Notify
 
-Windows toast notification for Claude Code CLI task completion.
+Claude Code CLI 任务完成时发送 Windows 通知提醒。
 
-When Claude finishes a task, a toast notification pops up so you can switch away without missing completion.
+当 Claude 完成任务时，自动弹出 Windows Toast 通知，让你切屏干别的事情也不会错过任务完成。
 
-## Install
+## 安装
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-This adds a `Notification` hook to your global Claude Code settings (`~/.claude/settings.json`).
+将 `Notification` hook 添加到全局 Claude Code 配置（`~/.claude/settings.json`）。
 
-## Uninstall
+## 卸载
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File uninstall.ps1
 ```
 
-## How It Works
+## 工作原理
 
-Uses Claude Code's built-in [hooks system](https://docs.anthropic.com/en/docs/claude-code/hooks). The `Notification` event fires when Claude Code wants to alert you (task done, waiting for input). The hook triggers `notify.ps1` which sends a native Windows toast notification with sound.
+利用 Claude Code 内置的 [hooks 系统](https://docs.anthropic.com/en/docs/claude-code/hooks)。`Notification` 事件在 Claude Code 需要通知你时触发（任务完成、等待输入等）。hook 触发 `notify.ps1`，通过 Windows 原生 WinRT API 发送带提示音的 Toast 通知。
 
-No external dependencies — uses the Windows WinRT toast API.
+无任何外部依赖，Windows 10/11 开箱即用。
 
-## Manual Usage
+## 手动使用
 
 ```powershell
-# Send a custom notification
-powershell -File notify.ps1 -Title "Hello" -Body "Something happened"
+# 发送自定义通知
+powershell -File notify.ps1 -Title "你好" -Body "发生了一些事情"
 
-# Pipe JSON from stdin (as Claude Code hooks do)
-echo '{"message":"Task completed!"}' | powershell -File notify.ps1
+# 通过 stdin 传入 JSON（与 Claude Code hook 一致的方式）
+echo '{"message":"任务完成！"}' | powershell -File notify.ps1
 ```
