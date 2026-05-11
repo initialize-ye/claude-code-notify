@@ -1,27 +1,52 @@
-const notifier = require("node-notifier");
-const path = require("path");
+const { exec } = require("child_process");
 const readline = require("readline");
 
-// If arguments provided, use them directly
 const title = process.argv[2] || "Claude Code";
 let body = process.argv[3] || "";
 
+function escapeXml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function escapePs(s) {
+  // Escape single quotes for PowerShell -Command "..." context
+  return s.replace(/'/g, "''");
+}
+
 function showNotification(t, b) {
-  notifier.notify(
-    {
-      title: t,
-      message: b,
-      sound: true,
-      wait: false,
-      icon: path.join(__dirname, "icon.png"),
-    },
+  const xmlTitle = escapeXml(t);
+  const xmlBody = escapeXml(b);
+
+  // Use scenario="urgent" to bypass Focus Assist (勿扰模式)
+  // so notifications show even during fullscreen video/gaming
+  const psCmd = [
+    `$x=[Windows.Data.Xml.Dom.XmlDocument,Windows.Data.Xml.Dom,ContentType=WindowsRuntime]::new();`,
+    `$x.LoadXml('<?xml version="1.0" encoding="UTF-8"?>`,
+    `<toast scenario="urgent" duration="long">`,
+    `<visual><binding template="ToastGeneric">`,
+    `<text>${escapePs(xmlTitle)}</text>`,
+    `<text>${escapePs(xmlBody)}</text>`,
+    `</binding></visual>`,
+    `<audio src="ms-winsoundevent:Notification.Default"/>`,
+    `</toast>');`,
+    `[Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime]|Out-Null;`,
+    `[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show($x)`,
+  ].join("");
+
+  exec(
+    `powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCmd.replace(/"/g, '\\"')}"`,
+    { timeout: 10000, windowsHide: true },
     (err) => {
       if (err) process.exit(1);
     }
   );
 }
 
-// If stdin is piped, read JSON (Claude Code hook mode)
 if (!process.stdin.isTTY) {
   let data = "";
   const rl = readline.createInterface({ input: process.stdin });
@@ -36,7 +61,6 @@ if (!process.stdin.isTTY) {
     showNotification(title, body);
   });
 } else {
-  // Direct call mode
   if (!body) body = "Task completed!";
   showNotification(title, body);
 }
