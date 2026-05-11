@@ -1,0 +1,15 @@
+{
+  "name": "notify",
+  "version": "1.0.0",
+  "description": "Claude Code CLI 任务完成时发送 Windows 通知提醒。",
+  "main": "notify.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-notifier": "^10.0.1"
+  }
+}

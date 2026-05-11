@@ -3,16 +3,20 @@ $ErrorActionPreference = "Stop"
 
 $claudeSettingsPath = Join-Path $env:USERPROFILE ".claude\settings.json"
 $scriptDir = $PSScriptRoot
-$notifyScript = Join-Path $scriptDir "notify.ps1"
+$notifyScript = Join-Path $scriptDir "notify.js"
 
-# Verify notify.ps1 exists
+# Verify notify.js exists
 if (-not (Test-Path $notifyScript)) {
-    Write-Error "notify.ps1 not found at: $notifyScript"
+    Write-Error "notify.js not found at: $notifyScript"
     exit 1
 }
 
-# Escape path for JSON (use forward slashes for cross-platform compatibility)
-$notifyScriptEscaped = $notifyScript.Replace('\', '/')
+# Find node.exe
+$nodePath = (Get-Command node -ErrorAction SilentlyContinue).Source
+if (-not $nodePath) {
+    Write-Error "Node.js not found. Please install Node.js first."
+    exit 1
+}
 
 # Read existing settings as PSCustomObject
 $settings = New-Object PSObject
@@ -23,7 +27,8 @@ if (Test-Path $claudeSettingsPath) {
 }
 
 # Build hook entry
-$hookCommand = "powershell -ExecutionPolicy Bypass -File `"$notifyScriptEscaped`""
+$notifyScriptEscaped = $notifyScript.Replace('\', '/')
+$hookCommand = "node `"$notifyScriptEscaped`""
 
 $hookEntry = [PSCustomObject]@{
     hooks = @(
