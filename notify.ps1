@@ -3,50 +3,42 @@ param(
     [string]$Body = ""
 )
 
-# Read stdin JSON from Claude Code hook (if piped)
-$stdin = ""
-if (-not [Console]::IsInputRedirected) {
+# If no args, try reading stdin JSON (Claude Code hook pipes JSON here)
+if ([string]::IsNullOrEmpty($Body) -and -not [Console]::IsInputRedirected) {
     $stdin = [Console]::In.ReadToEnd()
+    if (-not [string]::IsNullOrEmpty($stdin)) {
+        try {
+            $data = $stdin | ConvertFrom-Json
+            $Body = $data.message -or $data.notification
+        } catch {}
+    }
 }
 
-# Extract message from hook JSON if available
-if ([string]::IsNullOrEmpty($Body) -and -not [string]::IsNullOrEmpty($stdin)) {
-    try {
-        $data = $stdin | ConvertFrom-Json
-        if ($data.message) {
-            $Body = $data.message
-        } elseif ($data.notification) {
-            $Body = $data.notification
-        }
-    } catch {}
-}
-
-# Fallback body text
 if ([string]::IsNullOrEmpty($Body)) {
     $Body = "Task completed!"
 }
 
-# Load WinRT types for toast notifications
-[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
+# Escape XML special chars
+$safeTitle = $Title -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;' -replace '"', '&quot;'
+$safeBody  = $Body  -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;' -replace '"', '&quot;'
 
-# Build toast XML
-$template = @"
-<toast duration="short">
+try {
+    # Load WinRT types
+    [Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime] | Out-Null
+
+    $doc = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
+<toast scenario=""urgent"" duration=""long"">
     <visual>
-        <binding template="ToastGeneric">
-            <text>$Title</text>
-            <text>$Body</text>
+        <binding template=""ToastGeneric"">
+            <text>$safeTitle</text>
+            <text>$safeBody</text>
         </binding>
     </visual>
-    <audio src="ms-winsoundevent:Notification.Default"/>
-</toast>
-"@
-
-$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-$xml.LoadXml($template)
-
-$appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
-$toast = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId)
-$notification = New-Object Windows.UI.Notifications.ToastNotification($xml)
-$toast.Show($notification)
+    <audio src=""ms-winsoundevent:Notification.Default""/>
+</toast>"
+    $doc.LoadXml($xml)
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show($doc)
+} catch {
+    # Silent fail - don't block Claude Code
+}
