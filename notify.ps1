@@ -1,23 +1,24 @@
 ﻿param(
-    [string]$Title = "Claude Code",
-    [string]$Body = ""
+    [string]$Title = "",
+    [string]$Body = "",
+    [string]$Attribution = ""
 )
 
-# Read stdin JSON if piped (Claude Code hook mode)
-if ([string]::IsNullOrEmpty($Body) -and [Console]::IsInputRedirected) {
+# Read JSON from stdin (primary method, used by notify.js)
+if ([Console]::IsInputRedirected) {
     try {
         $stdin = [Console]::In.ReadToEnd()
         if (-not [string]::IsNullOrWhiteSpace($stdin)) {
             $data = $stdin | ConvertFrom-Json
-            if ($data.message) {
-                $Body = $data.message
-            } elseif ($data.notification) {
-                $Body = $data.notification
-            }
+            if ($data.title)       { $Title = $data.title }
+            if ($data.body)        { $Body = $data.body }
+            if ($data.attribution) { $Attribution = $data.attribution }
         }
     } catch {}
 }
 
+# Fallback for direct parameter usage
+if ([string]::IsNullOrEmpty($Title)) { $Title = "Claude Code" }
 if ([string]::IsNullOrWhiteSpace($Body)) {
     $Body = "Task completed!"
 }
@@ -34,6 +35,7 @@ function Escape-Xml([string]$s) {
 
 $safeTitle = Escape-Xml $Title
 $safeBody  = Escape-Xml $Body
+$safeAttr  = Escape-Xml $Attribution
 
 # Truncate to avoid excessively long notifications
 if ($safeBody.Length -gt 500) {
@@ -60,12 +62,20 @@ try {
     }
 
     $doc = New-Object Windows.Data.Xml.Dom.XmlDocument
+
+    # Build attribution line
+    $attrLine = ""
+    if (-not [string]::IsNullOrWhiteSpace($safeAttr)) {
+        $attrLine = "<text placement=""attribution"">$safeAttr</text>"
+    }
+
     $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
-<toast scenario=""urgent"" duration=""long"">
+<toast duration=""long"">
     <visual>
         <binding template=""ToastGeneric"">
             <text>$safeTitle</text>
             <text>$safeBody</text>
+            $attrLine
         </binding>
     </visual>
     <audio src=""ms-winsoundevent:Notification.Default""/>
