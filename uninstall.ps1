@@ -34,3 +34,9 @@ if ($settings.PSObject.Properties['hooks'] -and $settings.hooks.PSObject.Propert
 } else {
     Write-Host "No notification hook found in settings. Nothing to uninstall." -ForegroundColor Yellow
 }
+
+# Remove startup entry
+$regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$regName = "ClaudeCodeNotifyStartupCheck"
+Remove-ItemProperty -Path $regPath -Name $regName -ErrorAction SilentlyContinue
+Write-Host "Startup entry removed." -ForegroundColor Green

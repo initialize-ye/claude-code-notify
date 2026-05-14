@@ -69,4 +69,12 @@ Write-Host "Installed successfully!" -ForegroundColor Green
 Write-Host "Notification hook added to: $claudeSettingsPath"
 Write-Host "Notification script: $notifyScript"
 Write-Host ""
+
+# Register startup entry to auto-repair hook after reboot
+$regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$regName = "ClaudeCodeNotifyStartupCheck"
+$checkScript = Join-Path $scriptDir "startup-check.ps1"
+$regValue = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$checkScript`""
+Set-ItemProperty -Path $regPath -Name $regName -Value $regValue -Force
+Write-Host "Startup entry registered." -ForegroundColor Green
 Write-Host "Restart Claude Code for the hook to take effect."
