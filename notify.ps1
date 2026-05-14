@@ -19,6 +19,12 @@ if ([Console]::IsInputRedirected) {
 
 # Fallback for direct parameter usage
 if ([string]::IsNullOrEmpty($Title)) { $Title = "Claude Code" }
+
+# Filter out generic waiting messages
+if ($Body -match "(?i)waiting for your input") {
+    $Body = ""
+}
+
 if ([string]::IsNullOrWhiteSpace($Body)) {
     $Body = "Task completed!"
 }

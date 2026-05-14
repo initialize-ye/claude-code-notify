@@ -24,17 +24,6 @@ function showNotification(t, b, attribution) {
   child.stdin.end();
 }
 
-// Filter: skip notifications that are just "waiting for input"
-function shouldSkip(parsed) {
-  const type = parsed.notification_type || "";
-  if (type === "idle_prompt") return true;
-
-  const msg = (parsed.message || parsed.notification || "").toLowerCase();
-  if (msg.includes("waiting for your input")) return true;
-
-  return false;
-}
-
 // Extract meaningful text from hook JSON
 function extractMessage(parsed) {
   if (parsed.message) return parsed.message;
@@ -74,9 +63,6 @@ if (!process.stdin.isTTY) {
             fs.appendFileSync(logFile, entry, "utf-8");
           }
         } catch {}
-
-        // Skip idle/waiting notifications
-        if (shouldSkip(parsed)) return;
 
         body = body || extractMessage(parsed);
         attribution = extractAttribution(parsed);
