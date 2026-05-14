@@ -1,33 +1,33 @@
 # Uninstall Claude Code notification hook
 
 Write-Host ""
-Write-Host "=== Claude Code Notify - Uninstallation ===" -ForegroundColor Cyan
+Write-Host "=== Claude Code Notify - 卸载 ===" -ForegroundColor Cyan
 Write-Host ""
 
 $claudeSettingsPath = Join-Path $env:USERPROFILE ".claude\settings.json"
 
 # Step 1: Check settings file
-Write-Host "[1/3] Checking settings file..." -ForegroundColor Yellow
+Write-Host "[1/3] 检查配置文件..." -ForegroundColor Yellow
 if (-not (Test-Path $claudeSettingsPath)) {
-    Write-Host "  No settings file found. Nothing to uninstall." -ForegroundColor Gray
+    Write-Host "  未找到配置文件，无需卸载。" -ForegroundColor Gray
     Write-Host ""
-    Read-Host "Press Enter to exit"
+    Read-Host "按回车键退出"
     exit 0
 }
-Write-Host "  Found: $claudeSettingsPath" -ForegroundColor Gray
+Write-Host "  已找到: $claudeSettingsPath" -ForegroundColor Gray
 
 # Step 2: Remove hook
-Write-Host "[2/3] Removing notification hook..." -ForegroundColor Yellow
+Write-Host "[2/3] 移除通知 hook..." -ForegroundColor Yellow
 try {
     $raw = Get-Content $claudeSettingsPath -Raw -Encoding UTF8
     $settings = $raw | ConvertFrom-Json
     if (-not $settings) {
-        Write-Host "  Settings file is empty. Nothing to remove." -ForegroundColor Gray
+        Write-Host "  配置文件为空，无需移除。" -ForegroundColor Gray
     }
 } catch {
-    Write-Host "  ERROR: Failed to read settings.json: $_" -ForegroundColor Red
+    Write-Host "  错误: 读取 settings.json 失败: $_" -ForegroundColor Red
     Write-Host ""
-    Read-Host "Press Enter to exit"
+    Read-Host "按回车键退出"
     exit 1
 }
 
@@ -45,37 +45,37 @@ if ($removed) {
     try {
         $json = $settings | ConvertTo-Json -Depth 10
         [System.IO.File]::WriteAllText($claudeSettingsPath, $json, [System.Text.UTF8Encoding]::new($false))
-        Write-Host "  Hook removed from settings." -ForegroundColor Gray
+        Write-Host "  hook 已从配置中移除。" -ForegroundColor Gray
     } catch {
-        Write-Host "  ERROR: Failed to write settings.json: $_" -ForegroundColor Red
+        Write-Host "  错误: 写入 settings.json 失败: $_" -ForegroundColor Red
         Write-Host ""
-        Read-Host "Press Enter to exit"
+        Read-Host "按回车键退出"
         exit 1
     }
 } else {
-    Write-Host "  No notification hook found in settings." -ForegroundColor Gray
+    Write-Host "  配置中未找到通知 hook。" -ForegroundColor Gray
 }
 
 # Step 3: Remove startup entry
-Write-Host "[3/3] Removing startup entry..." -ForegroundColor Yellow
+Write-Host "[3/3] 移除开机自启动..." -ForegroundColor Yellow
 try {
     $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
     $regName = "ClaudeCodeNotifyStartupCheck"
     $existing = Get-ItemProperty -Path $regPath -Name $regName -ErrorAction SilentlyContinue
     if ($existing) {
         Remove-ItemProperty -Path $regPath -Name $regName -Force
-        Write-Host "  Startup entry removed from registry." -ForegroundColor Gray
+        Write-Host "  开机自启动已移除。" -ForegroundColor Gray
     } else {
-        Write-Host "  No startup entry found." -ForegroundColor Gray
+        Write-Host "  未找到开机自启动项。" -ForegroundColor Gray
     }
 } catch {
-    Write-Host "  WARNING: Could not remove startup entry: $_" -ForegroundColor Yellow
+    Write-Host "  警告: 无法移除开机自启动: $_" -ForegroundColor Yellow
 }
 
 # Done
 Write-Host ""
-Write-Host "=== Uninstallation Complete ===" -ForegroundColor Green
+Write-Host "=== 卸载完成 ===" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Restart Claude Code to take effect." -ForegroundColor White
+Write-Host "  重启 Claude Code 后生效。" -ForegroundColor White
 Write-Host ""
-Read-Host "Press Enter to exit"
+Read-Host "按回车键退出"
