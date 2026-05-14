@@ -304,8 +304,8 @@ try {
             $payload = @{
                 title       = $testTitle
                 body        = $testBody
-                attribution = ""
-                cwd         = ""
+                attribution = "测试"
+                cwd         = $scriptDir
                 isError     = $false
             } | ConvertTo-Json -Compress
             $payload | powershell.exe -NoProfile -ExecutionPolicy Bypass -File $notifyPs1

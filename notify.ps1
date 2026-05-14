@@ -121,8 +121,8 @@ try {
         default   { $audioLine = '<audio src="ms-winsoundevent:Notification.Default"/>' }
     }
 
-    # Override sound for error notifications
-    if ($IsError -and $config.errorStyle) {
+    # Override sound for error notifications (only if using default sound)
+    if ($IsError -and $config.errorStyle -and $config.sound -eq "default") {
         $audioLine = '<audio src="ms-winsoundevent:Notification.Looping.Alarm"/>'
     }
 
@@ -135,10 +135,13 @@ try {
     # Build action buttons
     $actionsLine = ""
     if ($config.actionButtons -and -not [string]::IsNullOrWhiteSpace($Cwd)) {
+        $cwdJson = $Cwd.Replace('\', '/').Replace('"', '\"')
+        $terminalArgs = "ms-terminal:{`"profile`":`"PowerShell`",`"startingDirectory`":`"$cwdJson`"}"
+        $safeTerminalArgs = Escape-Xml $terminalArgs
         $actionsLine = @"
 <actions>
         <action content="打开文件夹" arguments="explorer:$safeCwd" activationType="protocol"/>
-        <action content="打开终端" arguments="ms-terminal:">$safeCwd</action>
+        <action content="打开终端" arguments="$safeTerminalArgs" activationType="protocol"/>
     </actions>
 "@
     }
