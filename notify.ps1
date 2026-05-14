@@ -135,13 +135,9 @@ try {
     # Build action buttons
     $actionsLine = ""
     if ($config.actionButtons -and -not [string]::IsNullOrWhiteSpace($Cwd)) {
-        $cwdJson = $Cwd.Replace('\', '/').Replace('"', '\"')
-        $terminalArgs = "ms-terminal:{`"profile`":`"PowerShell`",`"startingDirectory`":`"$cwdJson`"}"
-        $safeTerminalArgs = Escape-Xml $terminalArgs
         $actionsLine = @"
 <actions>
-        <action content="打开文件夹" arguments="explorer:$safeCwd" activationType="protocol"/>
-        <action content="打开终端" arguments="$safeTerminalArgs" activationType="protocol"/>
+        <action content="打开项目文件夹" arguments="explorer:$safeCwd" activationType="protocol"/>
     </actions>
 "@
     }
