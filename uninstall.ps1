@@ -1,4 +1,4 @@
-# Uninstall Claude Code notification hook
+﻿# Uninstall Claude Code notification hook
 
 try {
     $ErrorActionPreference = "Stop"

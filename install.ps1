@@ -1,4 +1,4 @@
-# Install Claude Code notification hook
+﻿# Install Claude Code notification hook
 
 try {
     $ErrorActionPreference = "Stop"

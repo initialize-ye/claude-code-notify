@@ -1,4 +1,4 @@
-# Startup check: ensure Notification hook exists in Claude Code settings
+﻿# Startup check: ensure Notification hook exists in Claude Code settings
 # Runs silently at Windows logon via registry Run key
 
 $ErrorActionPreference = "SilentlyContinue"
