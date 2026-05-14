@@ -1,10 +1,10 @@
-param(
+﻿param(
     [string]$Title = "Claude Code",
     [string]$Body = ""
 )
 
 # Read stdin JSON if piped (Claude Code hook mode)
-if ([string]::IsNullOrEmpty($Body) -and -not [Console]::IsInputRedirected) {
+if ([string]::IsNullOrEmpty($Body) -and [Console]::IsInputRedirected) {
     try {
         $stdin = [Console]::In.ReadToEnd()
         if (-not [string]::IsNullOrWhiteSpace($stdin)) {
@@ -41,7 +41,23 @@ if ($safeBody.Length -gt 500) {
 }
 
 try {
+    # Load WinRT types
     [Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime] | Out-Null
+    [Windows.Data.Xml.Dom.XmlDocument,Windows.Data,ContentType=WindowsRuntime] | Out-Null
+
+    # Find registered Claude AppID from Start Menu
+    $appId = $null
+    try {
+        $apps = Get-StartApps | Where-Object { $_.Name -like '*claude*' }
+        if ($apps) {
+            $first = @($apps)[0]
+            $appId = $first.AppID
+        }
+    } catch {}
+
+    if ([string]::IsNullOrEmpty($appId)) {
+        $appId = 'Claude Code'
+    }
 
     $doc = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
@@ -55,7 +71,8 @@ try {
     <audio src=""ms-winsoundevent:Notification.Default""/>
 </toast>"
     $doc.LoadXml($xml)
-    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show($doc)
+    $toast = New-Object Windows.UI.Notifications.ToastNotification($doc)
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show($toast)
 } catch {
     # Fallback: try using msg.exe for legacy notification
     try {
