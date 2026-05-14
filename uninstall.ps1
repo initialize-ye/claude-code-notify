@@ -12,7 +12,7 @@ try {
     # Step 1: Check settings file
     Write-Host "[1/3] 检查配置文件..." -ForegroundColor Yellow
     if (-not (Test-Path $claudeSettingsPath)) {
-        Write-Host "  未找到配置文件，无需卸载。" -ForegroundColor Gray
+        Write-Host "  未找到配置文件，未安装过，无需卸载。" -ForegroundColor Gray
         exit 0
     }
     Write-Host "  已找到: $claudeSettingsPath" -ForegroundColor Gray
@@ -22,10 +22,14 @@ try {
     $raw = Get-Content $claudeSettingsPath -Raw -Encoding UTF8
     $settings = $raw | ConvertFrom-Json
     if (-not $settings) {
-        Write-Host "  配置文件为空，无需移除。" -ForegroundColor Gray
+        Write-Host "  配置文件为空，未安装过，无需移除。" -ForegroundColor Gray
     } else {
         $removed = $false
         if ($settings.PSObject.Properties['hooks'] -and $settings.hooks.PSObject.Properties['Notification']) {
+            # Backup before modifying
+            Copy-Item $claudeSettingsPath "$claudeSettingsPath.bak" -Force
+            Write-Host "  已备份: $claudeSettingsPath.bak" -ForegroundColor Gray
+
             $settings.hooks.PSObject.Properties.Remove('Notification')
             $removed = $true
 
@@ -35,11 +39,20 @@ try {
         }
 
         if ($removed) {
-            $json = $settings | ConvertTo-Json -Depth 10
-            [System.IO.File]::WriteAllText($claudeSettingsPath, $json, [System.Text.UTF8Encoding]::new($false))
-            Write-Host "  hook 已从配置中移除。" -ForegroundColor Gray
+            try {
+                $json = $settings | ConvertTo-Json -Depth 10
+                [System.IO.File]::WriteAllText($claudeSettingsPath, $json, [System.Text.UTF8Encoding]::new($false))
+                Write-Host "  hook 已从配置中移除。" -ForegroundColor Gray
+            } catch {
+                # Restore backup on failure
+                if (Test-Path "$claudeSettingsPath.bak") {
+                    Copy-Item "$claudeSettingsPath.bak" $claudeSettingsPath -Force
+                    Write-Host "  写入失败，已恢复备份。" -ForegroundColor Yellow
+                }
+                throw
+            }
         } else {
-            Write-Host "  配置中未找到通知 hook。" -ForegroundColor Gray
+            Write-Host "  配置中未找到通知 hook，未安装过。" -ForegroundColor Gray
         }
     }
 
