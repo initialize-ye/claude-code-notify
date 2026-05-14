@@ -3,27 +3,44 @@ param(
     [string]$Body = ""
 )
 
-# If no args, try reading stdin JSON (Claude Code hook pipes JSON here)
+# Read stdin JSON if piped (Claude Code hook mode)
 if ([string]::IsNullOrEmpty($Body) -and -not [Console]::IsInputRedirected) {
-    $stdin = [Console]::In.ReadToEnd()
-    if (-not [string]::IsNullOrEmpty($stdin)) {
-        try {
+    try {
+        $stdin = [Console]::In.ReadToEnd()
+        if (-not [string]::IsNullOrWhiteSpace($stdin)) {
             $data = $stdin | ConvertFrom-Json
-            $Body = $data.message -or $data.notification
-        } catch {}
-    }
+            if ($data.message) {
+                $Body = $data.message
+            } elseif ($data.notification) {
+                $Body = $data.notification
+            }
+        }
+    } catch {}
 }
 
-if ([string]::IsNullOrEmpty($Body)) {
+if ([string]::IsNullOrWhiteSpace($Body)) {
     $Body = "Task completed!"
 }
 
-# Escape XML special chars
-$safeTitle = $Title -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;' -replace '"', '&quot;'
-$safeBody  = $Body  -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;' -replace '"', '&quot;'
+# Escape XML special characters
+function Escape-Xml([string]$s) {
+    $s = $s.Replace('&', '&amp;')
+    $s = $s.Replace('<', '&lt;')
+    $s = $s.Replace('>', '&gt;')
+    $s = $s.Replace('"', '&quot;')
+    $s = $s.Replace("'", '&apos;')
+    return $s
+}
+
+$safeTitle = Escape-Xml $Title
+$safeBody  = Escape-Xml $Body
+
+# Truncate to avoid excessively long notifications
+if ($safeBody.Length -gt 500) {
+    $safeBody = $safeBody.Substring(0, 497) + "..."
+}
 
 try {
-    # Load WinRT types
     [Windows.UI.Notifications.ToastNotificationManager,Windows.UI.Notifications,ContentType=WindowsRuntime] | Out-Null
 
     $doc = New-Object Windows.Data.Xml.Dom.XmlDocument
@@ -40,5 +57,9 @@ try {
     $doc.LoadXml($xml)
     [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Claude Code').Show($doc)
 } catch {
-    # Silent fail - don't block Claude Code
+    # Fallback: try using msg.exe for legacy notification
+    try {
+        $msg = "$Title - $Body"
+        & msg.exe * /TIME:10 $msg 2>$null
+    } catch {}
 }
