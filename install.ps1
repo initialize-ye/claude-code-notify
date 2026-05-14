@@ -1,43 +1,61 @@
 # Install Claude Code notification hook
 $ErrorActionPreference = "Stop"
 
+Write-Host ""
+Write-Host "=== Claude Code Notify - Installation ===" -ForegroundColor Cyan
+Write-Host ""
+
+# Step 1: Check notify.js
+Write-Host "[1/5] Checking notification script..." -ForegroundColor Yellow
 $claudeSettingsPath = Join-Path $env:USERPROFILE ".claude\settings.json"
 $scriptDir = $PSScriptRoot
 $notifyScript = Join-Path $scriptDir "notify.js"
 
-# Verify notify.js exists
 if (-not (Test-Path $notifyScript)) {
-    Write-Error "notify.js not found at: $notifyScript"
+    Write-Host "  ERROR: notify.js not found at: $notifyScript" -ForegroundColor Red
+    Write-Host ""
+    Read-Host "Press Enter to exit"
     exit 1
 }
+Write-Host "  Found: $notifyScript" -ForegroundColor Gray
 
-# Verify Node.js is available
+# Step 2: Check Node.js
+Write-Host "[2/5] Checking Node.js..." -ForegroundColor Yellow
 $nodePath = (Get-Command node -ErrorAction SilentlyContinue).Source
 if (-not $nodePath) {
-    Write-Error "Node.js not found. Please install Node.js first."
+    Write-Host "  ERROR: Node.js not found. Please install Node.js first." -ForegroundColor Red
+    Write-Host ""
+    Read-Host "Press Enter to exit"
     exit 1
 }
+$nodeVersion = (node --version 2>$null)
+Write-Host "  Found: $nodePath ($nodeVersion)" -ForegroundColor Gray
 
-# Ensure .claude directory exists
+# Step 3: Read settings
+Write-Host "[3/5] Reading Claude Code settings..." -ForegroundColor Yellow
 $settingsDir = Split-Path $claudeSettingsPath -Parent
 if (-not (Test-Path $settingsDir)) {
     New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
+    Write-Host "  Created directory: $settingsDir" -ForegroundColor Gray
 }
 
-# Read existing settings or create empty object
 $settings = New-Object PSObject
 if (Test-Path $claudeSettingsPath) {
     try {
         $raw = Get-Content $claudeSettingsPath -Raw -Encoding UTF8
         $settings = $raw | ConvertFrom-Json
         if (-not $settings) { $settings = New-Object PSObject }
+        Write-Host "  Loaded existing settings." -ForegroundColor Gray
     } catch {
-        Write-Warning "settings.json is corrupted, will create a new one."
+        Write-Host "  WARNING: settings.json is corrupted, will create a new one." -ForegroundColor Yellow
         $settings = New-Object PSObject
     }
+} else {
+    Write-Host "  No existing settings found, will create new." -ForegroundColor Gray
 }
 
-# Build hook entry
+# Step 4: Write hook config
+Write-Host "[4/5] Writing notification hook..." -ForegroundColor Yellow
 $notifyScriptEscaped = $notifyScript.Replace('\', '/')
 $hookCommand = "node `"$notifyScriptEscaped`""
 
@@ -50,7 +68,6 @@ $hookEntry = [PSCustomObject]@{
     )
 }
 
-# Add or update hooks property
 $notifArray = @($hookEntry)
 
 if ($settings.PSObject.Properties['hooks']) {
@@ -67,20 +84,19 @@ if ($settings.PSObject.Properties['hooks']) {
     $settings | Add-Member -NotePropertyName "hooks" -NotePropertyValue $hooksObj -Force
 }
 
-# Write back settings
 try {
     $json = $settings | ConvertTo-Json -Depth 10
     [System.IO.File]::WriteAllText($claudeSettingsPath, $json, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "  Hook config written to: $claudeSettingsPath" -ForegroundColor Gray
 } catch {
-    Write-Error "Failed to write settings.json: $_"
+    Write-Host "  ERROR: Failed to write settings.json: $_" -ForegroundColor Red
+    Write-Host ""
+    Read-Host "Press Enter to exit"
     exit 1
 }
 
-Write-Host "Hook installed: $claudeSettingsPath" -ForegroundColor Green
-Write-Host "Notification script: $notifyScript" -ForegroundColor Green
-Write-Host ""
-
-# Register startup entry to auto-repair hook after reboot
+# Step 5: Register startup entry
+Write-Host "[5/5] Registering startup auto-repair..." -ForegroundColor Yellow
 try {
     $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
     $regName = "ClaudeCodeNotifyStartupCheck"
@@ -88,11 +104,19 @@ try {
     if (Test-Path $checkScript) {
         $regValue = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$checkScript`""
         Set-ItemProperty -Path $regPath -Name $regName -Value $regValue -Force
-        Write-Host "Startup entry registered." -ForegroundColor Green
+        Write-Host "  Startup entry registered in registry." -ForegroundColor Gray
+    } else {
+        Write-Host "  WARNING: startup-check.ps1 not found, skipping." -ForegroundColor Yellow
     }
 } catch {
-    Write-Warning "Could not register startup entry: $_"
+    Write-Host "  WARNING: Could not register startup entry: $_" -ForegroundColor Yellow
 }
 
+# Done
 Write-Host ""
-Write-Host "Restart Claude Code for the hook to take effect."
+Write-Host "=== Installation Complete ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "  Restart Claude Code for the hook to take effect." -ForegroundColor White
+Write-Host "  After restart, task completion will trigger a Windows notification." -ForegroundColor White
+Write-Host ""
+Read-Host "Press Enter to exit"
