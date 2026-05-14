@@ -76,7 +76,7 @@ try {
     }
 
     $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
-<toast duration=""long"">
+<toast scenario=""reminder"" duration=""long"">
     <visual>
         <binding template=""ToastGeneric"">
             <text>$safeTitle</text>
