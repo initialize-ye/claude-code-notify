@@ -180,6 +180,10 @@ try {
             defaultBody   = "Task completed!"
             showAttribution = $true
             notifyOnIdle  = $true
+            sound         = "default"
+            duration      = "long"
+            actionButtons = $true
+            errorStyle    = $true
         }
     }
 
@@ -222,6 +226,60 @@ try {
         $config.notifyOnIdle = $true
     }
 
+    # Option 5: Sound
+    $currentSound = $config.sound
+    Write-Host ""
+    Write-Host "  通知提示音 (当前: $currentSound)" -ForegroundColor White
+    Write-Host "    1) default - 默认提示音" -ForegroundColor Gray
+    Write-Host "    2) im      - IM 消息音" -ForegroundColor Gray
+    Write-Host "    3) alarm   - 闹钟音" -ForegroundColor Gray
+    Write-Host "    4) silent  - 静音" -ForegroundColor Gray
+    $input = Read-Host "  选择提示音 (1-4，或回车保留)"
+    switch ($input) {
+        "1" { $config.sound = "default" }
+        "2" { $config.sound = "im" }
+        "3" { $config.sound = "alarm" }
+        "4" { $config.sound = "silent" }
+    }
+
+    # Option 6: Duration
+    $currentDuration = $config.duration
+    Write-Host ""
+    Write-Host "  通知显示时长 (当前: $currentDuration)" -ForegroundColor White
+    Write-Host "    1) short      - 短（约 5 秒）" -ForegroundColor Gray
+    Write-Host "    2) long       - 长（约 25 秒）" -ForegroundColor Gray
+    Write-Host "    3) persistent - 常驻直到手动关闭" -ForegroundColor Gray
+    $input = Read-Host "  选择时长 (1-3，或回车保留)"
+    switch ($input) {
+        "1" { $config.duration = "short" }
+        "2" { $config.duration = "long" }
+        "3" { $config.duration = "persistent" }
+    }
+
+    # Option 7: Action buttons
+    $currentButtons = if ($config.actionButtons) { "Y" } else { "N" }
+    Write-Host ""
+    Write-Host "  通知操作按钮 (当前: $currentButtons)" -ForegroundColor White
+    Write-Host "    点击通知时可打开项目文件夹或终端" -ForegroundColor Gray
+    $input = Read-Host "  显示操作按钮？(Y/n)"
+    if ($input -eq 'n' -or $input -eq 'N') {
+        $config.actionButtons = $false
+    } elseif ($input -eq 'y' -or $input -eq 'Y' -or [string]::IsNullOrWhiteSpace($input)) {
+        $config.actionButtons = $true
+    }
+
+    # Option 8: Error style
+    $currentError = if ($config.errorStyle) { "Y" } else { "N" }
+    Write-Host ""
+    Write-Host "  错误通知样式 (当前: $currentError)" -ForegroundColor White
+    Write-Host "    任务出错时用不同标题和闹钟音提醒" -ForegroundColor Gray
+    $input = Read-Host "  启用错误通知样式？(Y/n)"
+    if ($input -eq 'n' -or $input -eq 'N') {
+        $config.errorStyle = $false
+    } elseif ($input -eq 'y' -or $input -eq 'Y' -or [string]::IsNullOrWhiteSpace($input)) {
+        $config.errorStyle = $true
+    }
+
     # Save config
     $configJson = $config | ConvertTo-Json -Depth 5
     [System.IO.File]::WriteAllText($configPath, $configJson, [System.Text.UTF8Encoding]::new($false))
@@ -241,9 +299,15 @@ try {
     if ($test -ne 'n' -and $test -ne 'N') {
         $notifyPs1 = Join-Path $scriptDir "notify.ps1"
         if (Test-Path $notifyPs1) {
-            $testBody = $config.defaultBody
             $testTitle = $config.title
-            $payload = @{ title = $testTitle; body = $testBody; attribution = "" } | ConvertTo-Json -Compress
+            $testBody = $config.defaultBody
+            $payload = @{
+                title       = $testTitle
+                body        = $testBody
+                attribution = ""
+                cwd         = ""
+                isError     = $false
+            } | ConvertTo-Json -Compress
             $payload | powershell.exe -NoProfile -ExecutionPolicy Bypass -File $notifyPs1
             Write-Host "  测试通知已发送。" -ForegroundColor Gray
         }

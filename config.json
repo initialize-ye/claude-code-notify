@@ -2,5 +2,9 @@
   "title": "Claude Code",
   "defaultBody": "Task completed!",
   "showAttribution": true,
-  "notifyOnIdle": true
+  "notifyOnIdle": true,
+  "sound": "default",
+  "duration": "long",
+  "actionButtons": true,
+  "errorStyle": true
 }

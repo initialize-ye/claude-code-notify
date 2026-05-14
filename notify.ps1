@@ -1,8 +1,36 @@
 ﻿param(
     [string]$Title = "",
     [string]$Body = "",
-    [string]$Attribution = ""
+    [string]$Attribution = "",
+    [string]$Cwd = "",
+    [bool]$IsError = $false
 )
+
+# Load config
+$configPath = Join-Path $PSScriptRoot "config.json"
+$config = @{
+    title         = "Claude Code"
+    defaultBody   = "Task completed!"
+    showAttribution = $true
+    notifyOnIdle  = $true
+    sound         = "default"
+    duration      = "long"
+    actionButtons = $true
+    errorStyle    = $true
+}
+if (Test-Path $configPath) {
+    try {
+        $loaded = Get-Content $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($loaded.title)         { $config.title = $loaded.title }
+        if ($loaded.defaultBody)   { $config.defaultBody = $loaded.defaultBody }
+        if ($null -ne $loaded.showAttribution) { $config.showAttribution = $loaded.showAttribution }
+        if ($null -ne $loaded.notifyOnIdle)    { $config.notifyOnIdle = $loaded.notifyOnIdle }
+        if ($loaded.sound)         { $config.sound = $loaded.sound }
+        if ($loaded.duration)      { $config.duration = $loaded.duration }
+        if ($null -ne $loaded.actionButtons)   { $config.actionButtons = $loaded.actionButtons }
+        if ($null -ne $loaded.errorStyle)      { $config.errorStyle = $loaded.errorStyle }
+    } catch {}
+}
 
 # Read JSON from stdin (primary method, used by notify.js)
 if ([Console]::IsInputRedirected) {
@@ -13,12 +41,14 @@ if ([Console]::IsInputRedirected) {
             if ($data.title)       { $Title = $data.title }
             if ($data.body)        { $Body = $data.body }
             if ($data.attribution) { $Attribution = $data.attribution }
+            if ($data.cwd)         { $Cwd = $data.cwd }
+            if ($null -ne $data.isError) { $IsError = $data.isError }
         }
     } catch {}
 }
 
 # Fallback for direct parameter usage
-if ([string]::IsNullOrEmpty($Title)) { $Title = "Claude Code" }
+if ([string]::IsNullOrEmpty($Title)) { $Title = $config.title }
 
 # Filter out generic waiting messages
 if ($Body -match "(?i)waiting for your input") {
@@ -26,7 +56,7 @@ if ($Body -match "(?i)waiting for your input") {
 }
 
 if ([string]::IsNullOrWhiteSpace($Body)) {
-    $Body = "Task completed!"
+    $Body = $config.defaultBody
 }
 
 # Escape XML special characters
@@ -42,6 +72,12 @@ function Escape-Xml([string]$s) {
 $safeTitle = Escape-Xml $Title
 $safeBody  = Escape-Xml $Body
 $safeAttr  = Escape-Xml $Attribution
+$safeCwd   = Escape-Xml $Cwd
+
+# Apply error style
+if ($IsError -and $config.errorStyle) {
+    $safeTitle = Escape-Xml "$Title [错误]"
+}
 
 # Truncate to avoid excessively long notifications
 if ($safeBody.Length -gt 500) {
@@ -75,8 +111,40 @@ try {
         $attrLine = "<text placement=""attribution"">$safeAttr</text>"
     }
 
+    # Build audio tag
+    $audioLine = ""
+    switch ($config.sound) {
+        "default" { $audioLine = '<audio src="ms-winsoundevent:Notification.Default"/>' }
+        "im"      { $audioLine = '<audio src="ms-winsoundevent:Notification.IM"/>' }
+        "alarm"   { $audioLine = '<audio src="ms-winsoundevent:Notification.Looping.Alarm"/>' }
+        "silent"  { $audioLine = '<audio silent="true"/>' }
+        default   { $audioLine = '<audio src="ms-winsoundevent:Notification.Default"/>' }
+    }
+
+    # Override sound for error notifications
+    if ($IsError -and $config.errorStyle) {
+        $audioLine = '<audio src="ms-winsoundevent:Notification.Looping.Alarm"/>'
+    }
+
+    # Build scenario attribute
+    $scenario = ""
+    if ($config.duration -eq "persistent") {
+        $scenario = ' scenario="reminder"'
+    }
+
+    # Build action buttons
+    $actionsLine = ""
+    if ($config.actionButtons -and -not [string]::IsNullOrWhiteSpace($Cwd)) {
+        $actionsLine = @"
+<actions>
+        <action content="打开文件夹" arguments="explorer:$safeCwd" activationType="protocol"/>
+        <action content="打开终端" arguments="ms-terminal:">$safeCwd</action>
+    </actions>
+"@
+    }
+
     $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
-<toast duration=""long"">
+<toast$scenario duration=""long"">
     <visual>
         <binding template=""ToastGeneric"">
             <text>$safeTitle</text>
@@ -84,7 +152,8 @@ try {
             $attrLine
         </binding>
     </visual>
-    <audio src=""ms-winsoundevent:Notification.Default""/>
+    $audioLine
+    $actionsLine
 </toast>"
     $doc.LoadXml($xml)
     $toast = New-Object Windows.UI.Notifications.ToastNotification($doc)
