@@ -3,7 +3,21 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
-const title = process.argv[2] || "Claude Code";
+// Load config
+const configPath = path.join(__dirname, "config.json");
+let config = {
+  title: "Claude Code",
+  defaultBody: "Task completed!",
+  showAttribution: true,
+  notifyOnIdle: true,
+};
+try {
+  if (fs.existsSync(configPath)) {
+    Object.assign(config, JSON.parse(fs.readFileSync(configPath, "utf-8")));
+  }
+} catch {}
+
+const title = process.argv[2] || config.title;
 let body = process.argv[3] || "";
 
 function showNotification(t, b, attribution) {
@@ -37,6 +51,7 @@ function extractMessage(parsed) {
 
 // Extract attribution/context info
 function extractAttribution(parsed) {
+  if (!config.showAttribution) return "";
   if (parsed.cwd) {
     return path.basename(parsed.cwd);
   }
@@ -64,16 +79,19 @@ if (!process.stdin.isTTY) {
           }
         } catch {}
 
+        // Skip idle notifications if configured
+        if (!config.notifyOnIdle && parsed.notification_type === "idle_prompt") return;
+
         body = body || extractMessage(parsed);
         attribution = extractAttribution(parsed);
       } catch {
         // Invalid JSON, use fallback
       }
     }
-    if (!body) body = "Task completed!";
+    if (!body) body = config.defaultBody;
     showNotification(title, body, attribution);
   });
 } else {
-  if (!body) body = "Task completed!";
+  if (!body) body = config.defaultBody;
   showNotification(title, body);
 }

@@ -1,0 +1,6 @@
+{
+  "title": "Claude Code",
+  "defaultBody": "Task completed!",
+  "showAttribution": true,
+  "notifyOnIdle": true
+}
