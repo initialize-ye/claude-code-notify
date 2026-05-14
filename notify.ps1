@@ -2,7 +2,6 @@
     [string]$Title = "",
     [string]$Body = "",
     [string]$Attribution = "",
-    [string]$Cwd = "",
     [bool]$IsError = $false
 )
 
@@ -12,10 +11,8 @@ $config = @{
     title         = "Claude Code"
     defaultBody   = "Task completed!"
     showAttribution = $true
-    notifyOnIdle  = $true
     sound         = "default"
     duration      = "long"
-    actionButtons = $true
     errorStyle    = $true
 }
 if (Test-Path $configPath) {
@@ -24,10 +21,8 @@ if (Test-Path $configPath) {
         if ($loaded.title)         { $config.title = $loaded.title }
         if ($loaded.defaultBody)   { $config.defaultBody = $loaded.defaultBody }
         if ($null -ne $loaded.showAttribution) { $config.showAttribution = $loaded.showAttribution }
-        if ($null -ne $loaded.notifyOnIdle)    { $config.notifyOnIdle = $loaded.notifyOnIdle }
         if ($loaded.sound)         { $config.sound = $loaded.sound }
         if ($loaded.duration)      { $config.duration = $loaded.duration }
-        if ($null -ne $loaded.actionButtons)   { $config.actionButtons = $loaded.actionButtons }
         if ($null -ne $loaded.errorStyle)      { $config.errorStyle = $loaded.errorStyle }
     } catch {}
 }
@@ -41,7 +36,6 @@ if ([Console]::IsInputRedirected) {
             if ($data.title)       { $Title = $data.title }
             if ($data.body)        { $Body = $data.body }
             if ($data.attribution) { $Attribution = $data.attribution }
-            if ($data.cwd)         { $Cwd = $data.cwd }
             if ($null -ne $data.isError) { $IsError = $data.isError }
         }
     } catch {}
@@ -72,7 +66,6 @@ function Escape-Xml([string]$s) {
 $safeTitle = Escape-Xml $Title
 $safeBody  = Escape-Xml $Body
 $safeAttr  = Escape-Xml $Attribution
-$safeCwd   = Escape-Xml $Cwd
 
 # Apply error style
 if ($IsError -and $config.errorStyle) {
@@ -131,8 +124,6 @@ try {
     if ($config.duration -eq "persistent") {
         $scenario = ' scenario="reminder"'
     }
-
-    # Action buttons removed - explorer: protocol not available on all systems
 
     $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
 <toast$scenario duration=""long"">

@@ -49,9 +49,11 @@ function showNotification(t, b, attribution, isError) {
 // Extract meaningful text from hook JSON
 function extractMessage(parsed) {
   if (parsed.message) return parsed.message;
-  if (parsed.notification) return parsed.notification;
-  if (parsed.notification && typeof parsed.notification === "object") {
-    return parsed.notification.message || parsed.notification.text || "";
+  if (parsed.notification) {
+    if (typeof parsed.notification === "object") {
+      return parsed.notification.message || parsed.notification.text || "";
+    }
+    return parsed.notification;
   }
   if (parsed.transcript_summary) return parsed.transcript_summary;
   return "";
