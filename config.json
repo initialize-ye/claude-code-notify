@@ -5,6 +5,5 @@
   "notifyOnIdle": true,
   "sound": "default",
   "duration": "long",
-  "actionButtons": true,
   "errorStyle": true
 }

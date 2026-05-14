@@ -182,7 +182,6 @@ try {
             notifyOnIdle  = $true
             sound         = "default"
             duration      = "long"
-            actionButtons = $true
             errorStyle    = $true
         }
     }
@@ -257,18 +256,7 @@ try {
     }
 
     # Option 7: Action buttons
-    $currentButtons = if ($config.actionButtons) { "Y" } else { "N" }
-    Write-Host ""
-    Write-Host "  通知操作按钮 (当前: $currentButtons)" -ForegroundColor White
-    Write-Host "    点击通知时可打开项目文件夹或终端" -ForegroundColor Gray
-    $input = Read-Host "  显示操作按钮？(Y/n)"
-    if ($input -eq 'n' -or $input -eq 'N') {
-        $config.actionButtons = $false
-    } elseif ($input -eq 'y' -or $input -eq 'Y' -or [string]::IsNullOrWhiteSpace($input)) {
-        $config.actionButtons = $true
-    }
-
-    # Option 8: Error style
+    # Option 7: Error style
     $currentError = if ($config.errorStyle) { "Y" } else { "N" }
     Write-Host ""
     Write-Host "  错误通知样式 (当前: $currentError)" -ForegroundColor White

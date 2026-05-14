@@ -132,15 +132,7 @@ try {
         $scenario = ' scenario="reminder"'
     }
 
-    # Build action buttons
-    $actionsLine = ""
-    if ($config.actionButtons -and -not [string]::IsNullOrWhiteSpace($Cwd)) {
-        $actionsLine = @"
-<actions>
-        <action content="打开项目文件夹" arguments="explorer:$safeCwd" activationType="protocol"/>
-    </actions>
-"@
-    }
+    # Action buttons removed - explorer: protocol not available on all systems
 
     $xml = "<?xml version=""1.0"" encoding=""UTF-8""?>
 <toast$scenario duration=""long"">
@@ -152,7 +144,6 @@ try {
         </binding>
     </visual>
     $audioLine
-    $actionsLine
 </toast>"
     $doc.LoadXml($xml)
     $toast = New-Object Windows.UI.Notifications.ToastNotification($doc)

@@ -12,7 +12,6 @@ let config = {
   notifyOnIdle: true,
   sound: "default",
   duration: "long",
-  actionButtons: true,
   errorStyle: true,
 };
 try {
@@ -24,7 +23,7 @@ try {
 const title = process.argv[2] || config.title;
 let body = process.argv[3] || "";
 
-function showNotification(t, b, attribution, cwd, isError) {
+function showNotification(t, b, attribution, isError) {
   const ps1 = path.join(__dirname, "notify.ps1");
 
   // Fallback: if ps1 doesn't exist, exit silently
@@ -35,7 +34,6 @@ function showNotification(t, b, attribution, cwd, isError) {
     title: t,
     body: b,
     attribution: attribution || "",
-    cwd: cwd || "",
     isError: !!isError,
   });
 
@@ -82,7 +80,6 @@ if (!process.stdin.isTTY) {
   rl.on("line", (line) => (data += line));
   rl.on("close", () => {
     let attribution = "";
-    let cwd = "";
     let isError = false;
     if (data) {
       try {
@@ -103,14 +100,13 @@ if (!process.stdin.isTTY) {
 
         body = body || extractMessage(parsed);
         attribution = extractAttribution(parsed);
-        cwd = parsed.cwd || "";
         isError = detectError(body);
       } catch {
         // Invalid JSON, use fallback
       }
     }
     if (!body) body = config.defaultBody;
-    showNotification(title, body, attribution, cwd, isError);
+    showNotification(title, body, attribution, isError);
   });
 } else {
   if (!body) body = config.defaultBody;
