@@ -48,19 +48,10 @@ function extractMessage(parsed) {
 
 // Extract attribution/context info
 function extractAttribution(parsed) {
-  const parts = [];
-
   if (parsed.cwd) {
-    const dirName = path.basename(parsed.cwd);
-    if (dirName) parts.push(dirName);
+    return path.basename(parsed.cwd);
   }
-
-  if (parsed.session_id) {
-    const shortId = parsed.session_id.substring(0, 8);
-    if (shortId) parts.push(`Session: ${shortId}`);
-  }
-
-  return parts.join(" · ");
+  return "";
 }
 
 // Read stdin JSON from Claude Code hook
