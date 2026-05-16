@@ -3,6 +3,13 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
+// Output valid JSON response for Claude Code hook system
+function hookResponse(decision, reason) {
+  try {
+    console.log(JSON.stringify({ decision, reason: reason || "" }));
+  } catch {}
+}
+
 // Load config
 const configPath = path.join(__dirname, "config.json");
 let config = {
@@ -27,7 +34,10 @@ function showNotification(t, b, attribution, isError) {
   const ps1 = path.join(__dirname, "notify.ps1");
 
   // Fallback: if ps1 doesn't exist, exit silently
-  if (!fs.existsSync(ps1)) return;
+  if (!fs.existsSync(ps1)) {
+    hookResponse("allow");
+    return;
+  }
 
   // Pass data as JSON via stdin to avoid quoting issues
   const payload = JSON.stringify({
@@ -39,6 +49,7 @@ function showNotification(t, b, attribution, isError) {
 
   const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -File "${ps1}"`;
   const child = exec(cmd, { timeout: 15000, windowsHide: true }, (err) => {
+    hookResponse("allow");
     if (err) process.exit(1);
   });
 
@@ -98,7 +109,10 @@ if (!process.stdin.isTTY) {
         } catch {}
 
         // Skip idle notifications if configured
-        if (!config.notifyOnIdle && parsed.notification_type === "idle_prompt") return;
+        if (!config.notifyOnIdle && parsed.notification_type === "idle_prompt") {
+          hookResponse("allow");
+          return;
+        }
 
         body = body || extractMessage(parsed);
         attribution = extractAttribution(parsed);
